@@ -1,7 +1,7 @@
 from lib.pipeline import Observer, UARTSource, Packetizer, PacketProcessor, StdOutObserver
 from lib.orbhid import OrbHid
-from lib.curve_4 import curve
 from lib.sensitivity import SensitivityAdjustment
+from lib.chording import ChordingAdjustment
 import gc
 
 Packet_lengths_spaceorb = {
@@ -22,7 +22,6 @@ Packet_lengths_spaceorb = {
     'd': 26,
     'k': 5
     }
-
 
 
 def process_spaceorb_buttondata(buf):
@@ -121,21 +120,22 @@ class MemObserver:
     def receive(self, msg):
         print("Mem: {0}".format(gc.mem_free()))
 
+    
 
-    
-    
         
 def main():
     pipeline = connect_pipeline([
         UARTSource(),
         Packetizer(Packet_lengths_spaceorb),
         PacketProcessor(Packet_processors_spaceorb),
-        SensitivityAdjustment(sensitivity)
+        ChordingAdjustment(),
+        SensitivityAdjustment(lambda x: int(x**3 / 512**2))
         ])
 
     pipeline[2].attach(StdOutObserver("Processed Packet"))
-    pipeline[2].attach(MemObserver())
-    pipeline[2].attach(HidReporterObserver())
+    pipeline[3].attach(StdOutObserver("Adjusted Packet"))
+    pipeline[3].attach(MemObserver())
+    pipeline[3].attach(HidReporterObserver())
 
     while True:
         pipeline[0].tick()
