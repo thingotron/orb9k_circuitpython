@@ -3,6 +3,7 @@ from lib.orbhid import OrbHid
 from lib.sensitivity import SensitivityAdjustment
 from lib.chording import ChordingAdjustment
 import gc
+import supervisor
 
 Packet_lengths_spaceorb = {
     'D': 13,
@@ -118,24 +119,29 @@ class MemObserver:
         pass
 
     def receive(self, msg):
-        print("Mem: {0}".format(gc.mem_free()))
-
-    
-
+        print("Mem: {0}".format(gc.mem_free(), ))
+        
+def flatten(x):
+    power = 3
+    x = float(x)/512
+    x = (x**power)*512
+    return int(x)
         
 def main():
+    supervisor.set_next_stack_limit(4096*3)
     pipeline = connect_pipeline([
         UARTSource(),
         Packetizer(Packet_lengths_spaceorb),
         PacketProcessor(Packet_processors_spaceorb),
         ChordingAdjustment(),
-        SensitivityAdjustment(lambda x: int(x**3 / 512**2))
+        SensitivityAdjustment(flatten)
         ])
-
+    print( pipeline[-1])
+    
     pipeline[2].attach(StdOutObserver("Processed Packet"))
     pipeline[3].attach(StdOutObserver("Adjusted Packet"))
-    pipeline[3].attach(MemObserver())
-    pipeline[3].attach(HidReporterObserver())
+    pipeline[-1].attach(MemObserver())
+    pipeline[-1].attach(HidReporterObserver())
 
     while True:
         pipeline[0].tick()
