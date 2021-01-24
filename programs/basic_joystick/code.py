@@ -1,9 +1,8 @@
-from lib.pipeline import Observer, UARTSource, Packetizer, PacketProcessor, StdOutObserver
-from lib.orbhid import OrbHid
-from lib.sensitivity import SensitivityAdjustment
-from lib.chording import ChordingAdjustment
 import gc
 import supervisor
+from lib.pipeline import Observer, UARTSource, Packetizer, PacketProcessor, StdOutObserver, PipelineStage
+from lib.orbhid import OrbHid
+from lib.chording import ChordingAdjustment
 
 Packet_lengths_spaceorb = {
     'D': 13,
@@ -113,20 +112,39 @@ class HidReporterObserver(Observer):
         self.orb._send()
 
 
-class MemObserver:
+# class MemObserver:
+
+#     def __init__(self):
+#         pass
+
+#     def receive(self, msg):
+#         print("Mem: {0}".format(gc.mem_free(), ))
+        
+def scale_normalized_value(x):
+    # note: this expects a float in the range
+    # of 0-1.0 or a little larger
+    if x < -1.0 or x > 1.0:
+        return x
+    else:
+        if x < 0:
+            return 0.5*(x**3 - x**2)
+        else:
+            return 0.5*(x**3 + x**2)
+        
+class OriginalOrbSensitivityAdjustment(PipelineStage):
 
     def __init__(self):
-        pass
+        super().__init__()
 
     def receive(self, msg):
-        print("Mem: {0}".format(gc.mem_free(), ))
-        
-def flatten(x):
-    power = 3
-    x = float(x)/512
-    x = (x**power)*512
-    return int(x)
-        
+        # doing per-axis for now even though it's wrong)
+        result = msg.copy()
+        if 'axes' in msg:
+            for i,v in enumerate(msg['axes']):
+                result['axes'][i] = int(512*scale_normalized_value(float(msg['axes'][i])/512))
+        self.emit(result)
+
+
 def main():
     supervisor.set_next_stack_limit(4096*3)
     pipeline = connect_pipeline([
@@ -134,13 +152,13 @@ def main():
         Packetizer(Packet_lengths_spaceorb),
         PacketProcessor(Packet_processors_spaceorb),
         ChordingAdjustment(),
-        SensitivityAdjustment(flatten)
+        OriginalOrbSensitivityAdjustment(),
         ])
     print( pipeline[-1])
     
     pipeline[2].attach(StdOutObserver("Processed Packet"))
-    pipeline[3].attach(StdOutObserver("Adjusted Packet"))
-    pipeline[-1].attach(MemObserver())
+#    pipeline[3].attach(StdOutObserver("Adjusted Packet"))
+#     pipeline[-1].attach(MemObserver())
     pipeline[-1].attach(HidReporterObserver())
 
     while True:
