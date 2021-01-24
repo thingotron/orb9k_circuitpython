@@ -101,5 +101,5 @@ class OrbHid:
             self._orbotron.send_report(self._report)
             self._last_report[:] = self._report
 
-        print(self._report)
+        # print(self._report)
 
