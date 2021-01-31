@@ -10,11 +10,8 @@ from lib.original_orb_sensitivity import OriginalOrbSensitivityAdjustment
 from lib.hidreporterobserver import HidReporterObserver
 
 
-def log(txt):
-    print(txt)
-
 def main():
-    log("start")
+    print("start")
     pipeline = Pipeline([
         UARTSource(),
         Packetizer(Packet_lengths_spaceorb),
@@ -22,14 +19,14 @@ def main():
         ChordingAdjustment(),
         OriginalOrbSensitivityAdjustment(),
         ])
-    log("assembled pipeline")
+    print("assembled pipeline")
     
     pipeline.stages[2].attach(StdOutObserver("Processed Packet"))
     pipeline.stages[3].attach(StdOutObserver("Adjusted Packet"))
     pipeline.stages[-1].attach(MemObserver())
     pipeline.stages[-1].attach(HidReporterObserver())
 
-    log("attached observers")
+    print("attached observers")
 
     while True:
         pipeline.tick()
