@@ -1,15 +1,44 @@
 import board
 from busio import UART
-from observable import Observer, PipelineStage
+
+class Observable:
+
+    def __init__(self):
+        self.observers = []
+
+    def attach(self, observer):
+        self.observers.append(observer)
+
+    def detach(self, observer):
+        self.observers.remove(observer)
+
+    def emit(self, msg):
+        for observer in self.observers:
+            observer.receive(msg)
 
 
-class UARTSource(PipelineStage):
+class Observer:
+
+    def __init__(self):
+        pass
+
+    def receive(self, msg):
+        pass
+
+
+class PipelineStage(Observable, Observer):
+
+    def __init__(self):
+        super().__init__()
+
+
+class UARTSource(Observable):
 
     def __init__(self):
         super().__init__()
         self.uart = UART(board.TX, board.RX, baudrate=9600)
 
-    def receive(self, msg):
+    def tick(self):
         self.emit(self.uart.read(self.uart.in_waiting))
 
 
@@ -42,9 +71,8 @@ class Packetizer(PipelineStage):
             self.in_packet = False
             self.cursor = 0
 
-    def receive(self, msg):
-        # message should be a sequence of bytes
-        for b in msg:
+    def receive(self, bs):
+        for b in bs:
             self.add_byte(b)
 
 

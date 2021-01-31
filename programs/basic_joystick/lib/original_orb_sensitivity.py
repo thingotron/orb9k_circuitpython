@@ -1,4 +1,4 @@
-from .pipeline import PipelineStage
+from .observable import PipelineStage
 from .sqrt import sqrt
 
 def scale_normalized_value(x):
@@ -22,7 +22,6 @@ class OriginalOrbSensitivityAdjustment(PipelineStage):
         super().__init__()
 
     def receive(self, msg):
-        # doing per-axis for now even though it's wrong)
         result = msg  #.copy() removed for memory--use with caution
         if 'axes' in msg:
             axes = msg['axes']
